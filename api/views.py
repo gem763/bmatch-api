@@ -26,10 +26,23 @@ class SearchView(View):
             qry = qry.split(' ')
             bnames = bnames.split(' ')
             sims = {}
+
             for bname in bnames:
                 try:
                     sims[bname] = float(w2v.wv.n_similarity([bname], qry))
                 except:
                     pass
-            # sims = {bname:float(w2v.wv.n_similarity([bname], qry)) for bname in bnames}
+
             return JsonResponse(sims)
+
+
+class SimwordsView(View):
+    def get(self, request):
+        bname = request.GET.get('b', None)
+
+        if bname is None:
+            return JsonResponse({})
+
+        else:
+            simwords = {k:v for k,v in w2v.wv.most_similar(bname, topn=100) if v>0.5}
+            return JsonResponse(simwords, safe=False)
