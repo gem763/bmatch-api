@@ -42,11 +42,13 @@ class SearchView(View):
 
 class SimwordsView(View):
     def get(self, request):
-        bname = request.GET.get('b', None)
+        words = request.GET.get('b', None)
+        topn = request.GET.get('topn', 100)
+        min = request.GET.get('min', 0.5)
 
-        if bname is None:
+        if words is None:
             return JsonResponse({})
 
         else:
-            simwords = {k:v for k,v in w2v.wv.most_similar(bname, topn=100) if v>0.5}
+            simwords = {k:v for k,v in w2v.wv.most_similar(words.split(' '), topn=topn) if v>min}
             return JsonResponse(simwords, safe=False)
