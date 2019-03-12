@@ -11,11 +11,11 @@ import time
 # Create your views here.
 
 model_path = os.path.join(settings.BASE_DIR, 'word2vec.model')
-w2v = Word2Vec.load(model_path)
+# w2v = Word2Vec.load(model_path)
 
 
 def test(request):
-    return HttpResponse('api page')
+    return HttpResponse(model_path)
 
 
 class SearchView(View):
