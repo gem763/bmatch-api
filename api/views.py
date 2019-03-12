@@ -14,6 +14,10 @@ model_path = os.path.join(settings.BASE_DIR, 'word2vec.model')
 w2v = Word2Vec.load(model_path)
 
 
+def test(request):
+    return HttpResponse('api page')
+
+
 class SearchView(View):
     def get(self, request):
         qry = request.GET.get('q', None)
