@@ -7,6 +7,7 @@ from django.views.generic import View
 from gensim.models import Word2Vec
 import os
 import time
+import json
 
 # Create your views here.
 
@@ -19,6 +20,27 @@ def test(request):
 
 
 class SearchView(View):
+    def get(self, request):
+        q = request.GET.get('q', None)
+
+        if q is not None:
+            q = json.loads(q)
+            qry = q.pop('qry')
+            sims = {}
+
+            for bname, keywords in q.items():
+                try:
+                    sims[bname] = float(w2v.wv.n_similarity(keywords, qry))
+                except:
+                    _keywords = [k for k in keywords if k in w2v.wv.vocab]
+                    _qry = [k for k in qry if k in w2v.wv.vocab]
+                    if len(_keywords)*len(_qry) != 0:
+                        sims[bname] = float(w2v.wv.n_similarity(_keywords, _qry))
+
+            return JsonResponse(sims)
+
+
+class SearchView2(View):
     def get(self, request):
         qry = request.GET.get('q', None)
         bnames = request.GET.get('b', None)
@@ -38,6 +60,7 @@ class SearchView(View):
                     pass
 
             return JsonResponse(sims)
+
 
 
 class SimwordsView(View):
