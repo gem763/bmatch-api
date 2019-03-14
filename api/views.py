@@ -20,9 +20,9 @@ def test(request):
 
 
 class SearchView(View):
-    def get(self, request):
-        qry = request.GET.get('qry', None)
-        brands = request.GET.get('brands', None)
+    def post(self, request):
+        qry = request.POST.get('qry', None)
+        brands = request.POST.get('brands', None)
 
         if (qry is None) | (brands is None):
             return JsonResponse({})
@@ -68,23 +68,35 @@ class SearchView_old(View):
 
 
 class SimwordsView(View):
-    def get(self, request):
-        words = request.GET.get('w', None)
-        topn = request.GET.get('topn', 100)
-        min = request.GET.get('min', 0.5)
+    def post(self, request):
+        words = request.POST.get('w', None)
+        topn = request.POST.get('topn', 100)
+        min = request.POST.get('min', 0.5)
 
         if words is None:
             return JsonResponse({})
 
         else:
-            simwords = {k:v for k,v in w2v.wv.most_similar(words.split(' '), topn=int(topn)) if v>float(min)}
-            return JsonResponse(simwords)
+            words = words.split(' ')
+
+            try:
+                simwords = {k:v for k,v in w2v.wv.most_similar(words, topn=int(topn)) if v>float(min)}
+                return JsonResponse(simwords)
+
+            except:
+                _words = [k for k in words if k in w2v.wv.vocab]
+                if len(_words) != 0:
+                    simwords = {k:v for k,v in w2v.wv.most_similar(_words, topn=int(topn)) if v>float(min)}
+                    return JsonResponse(simwords)
+
+                else:
+                    return JsonResponse({})
 
 
 class SimbrandsView(View):
-    def get(self, request):
-        my = request.GET.get('my', None)
-        brands = request.GET.get('brands', None)
+    def post(self, request):
+        my = request.POST.get('my', None)
+        brands = request.POST.get('brands', None)
         # topn = request.GET.get('topn', 30)
         # min = request.GET.get('min', 0.2)
 

@@ -50,6 +50,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'main.urls'
+# CSRF_COOKIE_SECURE = False
 
 TEMPLATES = [
     {
