@@ -21,14 +21,18 @@ def test(request):
 
 class SearchView(View):
     def get(self, request):
-        q = request.GET.get('q', None)
+        qry = request.GET.get('qry', None)
+        brands = request.GET.get('brands', None)
 
-        if q is not None:
-            q = json.loads(q)
-            qry = q.pop('qry')
+        if (qry is None) | (brands is None):
+            return JsonResponse({})
+
+        else:
+            brands = json.loads(brands)
+            qry = qry.split(' ')
             sims = {}
 
-            for bname, keywords in q.items():
+            for bname, keywords in brands.items():
                 try:
                     sims[bname] = float(w2v.wv.n_similarity(keywords, qry))
                 except:
@@ -40,7 +44,7 @@ class SearchView(View):
             return JsonResponse(sims)
 
 
-class SearchView2(View):
+class SearchView_old(View):
     def get(self, request):
         qry = request.GET.get('q', None)
         bnames = request.GET.get('b', None)
@@ -65,7 +69,7 @@ class SearchView2(View):
 
 class SimwordsView(View):
     def get(self, request):
-        words = request.GET.get('b', None)
+        words = request.GET.get('w', None)
         topn = request.GET.get('topn', 100)
         min = request.GET.get('min', 0.5)
 
@@ -73,5 +77,32 @@ class SimwordsView(View):
             return JsonResponse({})
 
         else:
-            simwords = {k:v for k,v in w2v.wv.most_similar(words.split(' '), topn=topn) if v>min}
-            return JsonResponse(simwords, safe=False)
+            simwords = {k:v for k,v in w2v.wv.most_similar(words.split(' '), topn=int(topn)) if v>float(min)}
+            return JsonResponse(simwords)
+
+
+class SimbrandsView(View):
+    def get(self, request):
+        my = request.GET.get('my', None)
+        brands = request.GET.get('brands', None)
+        # topn = request.GET.get('topn', 30)
+        # min = request.GET.get('min', 0.2)
+
+        if (my is None) | (brands is None):
+            return JsonResponse({})
+
+        else:
+            brands = json.loads(brands)
+            mykeywords = brands.pop(my)
+            sims = {}
+
+            for bname, keywords in brands.items():
+                try:
+                    sims[bname] = float(w2v.wv.n_similarity(keywords, mykeywords))
+                except:
+                    _keywords = [k for k in keywords if k in w2v.wv.vocab]
+                    _mykeywords = [k for k in mykeywords if k in w2v.wv.vocab]
+                    if len(_keywords)*len(_mykeywords) != 0:
+                        sims[bname] = float(w2v.wv.n_similarity(_keywords, _mykeywords))
+
+            return JsonResponse(sims)
