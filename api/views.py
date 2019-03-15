@@ -80,13 +80,13 @@ class SimwordsView(View):
             words = words.split(' ')
 
             try:
-                simwords = {k:v for k,v in w2v.wv.most_similar(words, topn=int(topn)) if v>float(min)}
+                simwords = {k:v for k,v in w2v.wv.most_similar(words, topn=int(topn)) if v > float(min)}
                 return JsonResponse(simwords)
 
             except:
                 _words = [k for k in words if k in w2v.wv.vocab]
                 if len(_words) != 0:
-                    simwords = {k:v for k,v in w2v.wv.most_similar(_words, topn=int(topn)) if v>float(min)}
+                    simwords = {k:v for k,v in w2v.wv.most_similar(_words, topn=int(topn)) if v > float(min)}
                     return JsonResponse(simwords)
 
                 else:
@@ -97,8 +97,6 @@ class SimbrandsView(View):
     def post(self, request):
         my = request.POST.get('my', None)
         brands = request.POST.get('brands', None)
-        # topn = request.GET.get('topn', 30)
-        # min = request.GET.get('min', 0.2)
 
         if (my is None) | (brands is None):
             return JsonResponse({})
