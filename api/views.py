@@ -94,25 +94,35 @@ class SimwordsView(View):
 
 
 class SimbrandsView(View):
+    def _simbrands(self, mykeywords, keywords_dict):
+        sims = {}
+        for bname, keywords in keywords_dict.items():
+            try:
+                sims[bname] = float(w2v.wv.n_similarity(keywords, mykeywords))
+            except:
+                _keywords = [k for k in keywords if k in w2v.wv.vocab]
+                _mykeywords = [k for k in mykeywords if k in w2v.wv.vocab]
+                if len(_keywords)*len(_mykeywords) != 0:
+                    sims[bname] = float(w2v.wv.n_similarity(_keywords, _mykeywords))
+
+        return sims
+
     def post(self, request):
-        my = request.POST.get('my', None)
+        qry = request.POST.get('qry', None)
+        mybname = request.POST.get('mybname', None)
         brands = request.POST.get('brands', None)
 
-        if (my is None) | (brands is None):
-            return JsonResponse({})
+        if (qry is None) & (mybname is not None) & (brands is not None):
+            keywords_dict = json.loads(brands)
+            mykeywords = keywords_dict[mybname]
+            sims = self._simbrands(mykeywords, keywords_dict)
+            return JsonResponse(sims)
+
+        elif (qry is not None) & (mybname is None) & (brands is not None):
+            keywords_dict = json.loads(brands)
+            mykeywords = qry.split(' ')
+            sims = self._simbrands(mykeywords, keywords_dict)
+            return JsonResponse(sims)
 
         else:
-            brands = json.loads(brands)
-            mykeywords = brands.pop(my)
-            sims = {}
-
-            for bname, keywords in brands.items():
-                try:
-                    sims[bname] = float(w2v.wv.n_similarity(keywords, mykeywords))
-                except:
-                    _keywords = [k for k in keywords if k in w2v.wv.vocab]
-                    _mykeywords = [k for k in mykeywords if k in w2v.wv.vocab]
-                    if len(_keywords)*len(_mykeywords) != 0:
-                        sims[bname] = float(w2v.wv.n_similarity(_keywords, _mykeywords))
-
-            return JsonResponse(sims)
+            return JsonResponse({})
