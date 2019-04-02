@@ -4,15 +4,15 @@ from django.conf import settings
 from django.views.generic import View
 # from django.contrib.staticfiles.storage import staticfiles_storage
 # from django.contrib.staticfiles.templatetags.staticfiles import static
-from gensim.models import Word2Vec
+from gensim.models import Word2Vec, Doc2Vec
 import os
 import time
 import json
 
 # Create your views here.
 
-model_path = os.path.join(settings.BASE_DIR, 'word2vec.model')
-w2v = Word2Vec.load(model_path)
+model_path = os.path.join(settings.BASE_DIR, 'doc2vec.model')
+d2v = Doc2Vec.load(model_path)
 
 
 def test(request):
@@ -67,7 +67,7 @@ class SearchView_old(View):
 
 
 
-class SimwordsView(View):
+class SimwordsView_old(View):
     def post(self, request):
         words = request.POST.get('w', None)
         topn = request.POST.get('topn', 100)
@@ -93,7 +93,41 @@ class SimwordsView(View):
                     return JsonResponse({})
 
 
+class SimwordsView(View):
+    def post(self, request):
+        bname = request.POST.get('bname', None)
+        topn = request.POST.get('topn', 100)
+        min = request.POST.get('min', 0.5)
+
+        if bname is None:
+            return JsonResponse({})
+
+        else:
+            simwords = d2v.wv.most_similar(positive=[d2v.docvecs[bname]], topn=int(topn))
+            return JsonResponse({k:v for k,v in simwords if v > float(min)})
+
+
 class SimbrandsView(View):
+    def post(self, request):
+        qry = request.POST.get('qry', None)
+        bname = request.POST.get('bname', None)
+
+        if (qry is None) & (bname is not None):
+            sims = d2v.docvecs.most_similar(positive=[bname])
+            return JsonResponse(dict(sims))
+
+        elif (qry is not None) & (bname is None):
+            pass
+            # keywords_dict = json.loads(brands)
+            # mykeywords = qry.split(' ')
+            # sims = self._simbrands(mykeywords, keywords_dict)
+            # return JsonResponse(sims)
+
+        else:
+            return JsonResponse({})
+
+
+class SimbrandsView_old(View):
     def _simbrands(self, mykeywords, keywords_dict):
         sims = {}
         for bname, keywords in keywords_dict.items():
@@ -126,3 +160,18 @@ class SimbrandsView(View):
 
         else:
             return JsonResponse({})
+
+
+class IdentityView(View):
+    def post(self, request):
+        bname = request.POST.get('bname', None)
+        idwords = request.POST.get('idwords', None)
+
+        if (bname is None) | (idwords is None):
+            return JsonResponse({})
+
+        else:
+            idwords = json.loads(idwords)
+            for _idwords in idwords:
+                for k,v in _idwords.items():
+                    pass
