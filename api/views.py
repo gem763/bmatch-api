@@ -8,6 +8,7 @@ from gensim.models import Word2Vec, Doc2Vec
 import os
 import time
 import json
+import numpy as np
 
 # Create your views here.
 
@@ -162,6 +163,14 @@ class SimbrandsView_old(View):
             return JsonResponse({})
 
 
+def minmax_scale(dic, max=100, min=0):
+    keys = dic.keys()
+    x = np.array(list(dic.values()))
+    x = np.interp(x, (x.min(), x.max()), (min, max))
+    # return dict(zip(keys, x))
+    return {k:int(v) for k,v in zip(keys, x)}
+
+
 class IdentityView(View):
     def post(self, request):
         bname = request.POST.get('bname', None)
@@ -172,6 +181,19 @@ class IdentityView(View):
 
         else:
             idwords = json.loads(idwords)
+            brand_vec = d2v.docvecs[bname]
+            idty = {}
+
             for _idwords in idwords:
+                _idty = {}
                 for k,v in _idwords.items():
-                    pass
+                    word_vec = d2v.infer_vector([w.strip() for w in v.split(' ')], epochs=500)
+                    _idty[k] = float(d2v.wv.cosine_similarities(brand_vec, [word_vec])[0])
+
+                _idty_sum = sum(_idty.values())
+                _idty = {k:v/_idty_sum for k,v in _idty.items()}
+                idty.update(_idty)
+
+            idty = minmax_scale(idty, max=100, min=30)
+            print(idty)
+            return JsonResponse(idty)
