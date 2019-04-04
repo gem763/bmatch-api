@@ -103,8 +103,11 @@ class SimwordsView(View):
             return JsonResponse({})
 
         else:
-            simwords = d2v.wv.most_similar(positive=[d2v.docvecs[bname]], topn=int(topn))
-            return JsonResponse({k:v for k,v in simwords if v > float(min)})
+            if bname in d2v.docvecs:
+                simwords = d2v.wv.most_similar(positive=[d2v.docvecs[bname]], topn=int(topn))
+                return JsonResponse({k:v for k,v in simwords if v > float(min)})
+            else:
+                return JsonResponse({})
 
 
 class SimbrandsView(View):
@@ -114,8 +117,11 @@ class SimbrandsView(View):
         topn = len(d2v.docvecs) + 10
 
         if (qry is None) & (bname is not None):
-            sims = d2v.docvecs.most_similar(positive=[bname], topn=topn)
-            return JsonResponse(dict(sims))
+            if bname in d2v.docvecs:
+                sims = d2v.docvecs.most_similar(positive=[bname], topn=topn)
+                return JsonResponse(dict(sims))
+            else:
+                return JsonResponse({})
 
         elif (qry is not None) & (bname is None):
             qry = [w for w in re.split('\W+', qry) if w!='']
@@ -170,15 +176,51 @@ def minmax_scale(dic, max=100, min=0):
     return {k:int(v) for k,v in zip(keys, x)}
 
 
+def normalized(scores_pair):
+    bnames = d2v.docvecs.doctags.keys()
+    id1, id2 = scores_pair.keys()
+
+    for bname in bnames:
+        _sum = scores_pair[id1][bname] + scores_pair[id2][bname]
+        scores_pair[id1][bname] /= _sum
+        scores_pair[id2][bname] /= _sum
+
+    return scores_pair
+
+
 class IdentityView(View):
     def post(self, request):
         bname = request.POST.get('bname', None)
         idwords = request.POST.get('idwords', None)
 
-        if (bname is None) | (idwords is None):
+        if idwords is None:
             return JsonResponse({})
 
-        else:
+        elif bname is None:
+            idwords = json.loads(idwords)
+            topn = len(d2v.docvecs) + 10
+            idty = {}
+            for _idwords in idwords:
+                scores_pair = {}
+                for k,v in _idwords.items():
+                    word_vec = d2v.infer_vector([w.strip() for w in v.split(' ')], epochs=500)
+                    _scores = dict(d2v.docvecs.most_similar(positive=[word_vec], topn=topn))
+                    scores_pair[k] = _scores
+                    # print(_scores['engineeredgarment'])
+                    # 주의할것! 일부 브랜드가 d2v 모델에 안들어가 있다. 트위터 글이 없어서...
+
+                for idname, scores in normalized(scores_pair).items():
+                    for _bname, _score in scores.items():
+                        if _bname not in idty: idty[_bname] = {}
+                        idty[_bname][idname] = _score
+
+            for _bname, _idty in idty.items():
+                idty[_bname] = minmax_scale(_idty, max=100, min=30)
+
+            # print(idty)
+            return JsonResponse(idty)
+
+        elif bname in d2v.docvecs:
             idwords = json.loads(idwords)
             brand_vec = d2v.docvecs[bname]
             idty = {}
@@ -195,3 +237,6 @@ class IdentityView(View):
 
             idty = minmax_scale(idty, max=100, min=30)
             return JsonResponse(idty)
+
+        else:
+            return JsonResponse({})
