@@ -168,10 +168,19 @@ class SimbrandsView(View):
 #             return JsonResponse({})
 
 
-def minmax_scale(dic, max=100, min=0):
+def minmax_scale(dic, max=100, min=0, type=0):
     keys = dic.keys()
     x = np.array(list(dic.values()))
-    x = np.interp(x, (x.min(), x.max()), (min, max))
+
+    if type==0:
+        x = np.interp(x, (x.min(), x.max()), (min, max))
+
+    elif (type==1) | (type==2):
+        x_min = 0 if x.min()<0 else x.min()*0.8
+        x_max = x.max()*1.2
+        x = np.interp(x, (x.min(), x.max()), (x_min, x_max))
+        x = np.clip(x*100, min, max)
+
     # return dict(zip(keys, x))
     return {k:int(v) for k,v in zip(keys, x)}
 
@@ -192,6 +201,7 @@ class IdentityView(View):
     def post(self, request):
         bname = request.POST.get('bname', None)
         idwords = request.POST.get('idwords', None)
+        id_scaletype= int(request.POST.get('id_scaletype', 0))
 
         if idwords is None:
             return JsonResponse({})
@@ -209,13 +219,16 @@ class IdentityView(View):
                     # print(_scores['engineeredgarment'])
                     # 주의할것! 일부 브랜드가 d2v 모델에 안들어가 있다. 트위터 글이 없어서...
 
-                for idname, scores in normalized(scores_pair).items():
+                if (id_scaletype==0) | (id_scaletype==1):
+                    scores_pair = normalized(scores_pair)
+
+                for idname, scores in scores_pair.items():
                     for _bname, _score in scores.items():
                         if _bname not in idty: idty[_bname] = {}
                         idty[_bname][idname] = _score
 
             for _bname, _idty in idty.items():
-                idty[_bname] = minmax_scale(_idty, max=100, min=30)
+                idty[_bname] = minmax_scale(_idty, max=100, min=30, type=id_scaletype)
 
             # print(idty)
             return JsonResponse(idty)
@@ -231,11 +244,13 @@ class IdentityView(View):
                     word_vec = d2v.infer_vector([w.strip() for w in v.split(' ')], epochs=500)
                     _idty[k] = float(d2v.wv.cosine_similarities(brand_vec, [word_vec])[0])
 
-                _idty_sum = sum(_idty.values())
-                _idty = {k:v/_idty_sum for k,v in _idty.items()}
+                if (id_scaletype==0) | (id_scaletype==1):
+                    _idty_sum = sum(_idty.values())
+                    _idty = {k:v/_idty_sum for k,v in _idty.items()}
+
                 idty.update(_idty)
 
-            idty = minmax_scale(idty, max=100, min=30)
+            idty = minmax_scale(idty, max=100, min=30, type=id_scaletype)
             return JsonResponse(idty)
 
         else:
