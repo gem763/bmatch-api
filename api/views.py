@@ -202,12 +202,15 @@ class IdentityView(View):
         bname = request.POST.get('bname', None)
         idwords = request.POST.get('idwords', None)
         id_scaletype= int(request.POST.get('id_scaletype', 0))
+        weights = request.POST.get('weights', None)
 
         if idwords is None:
             return JsonResponse({})
 
         elif bname is None:
             idwords = json.loads(idwords)
+            weights = json.loads(weights)
+
             topn = len(d2v.docvecs) + 10
             idty = {}
             for _idwords in idwords:
@@ -229,6 +232,8 @@ class IdentityView(View):
 
             for _bname, _idty in idty.items():
                 idty[_bname] = minmax_scale(_idty, max=100, min=30, type=id_scaletype)
+
+            
 
             # print(idty)
             return JsonResponse(idty)
