@@ -222,6 +222,7 @@ class IdentityView(View):
                     # print(_scores['engineeredgarment'])
                     # 주의할것! 일부 브랜드가 d2v 모델에 안들어가 있다. 트위터 글이 없어서...
 
+
                 if (id_scaletype==0) | (id_scaletype==1):
                     scores_pair = normalized(scores_pair)
 
@@ -233,10 +234,9 @@ class IdentityView(View):
             for _bname, _idty in idty.items():
                 idty[_bname] = minmax_scale(_idty, max=100, min=30, type=id_scaletype)
 
-            
 
-            # print(idty)
             return JsonResponse(idty)
+
 
         elif bname in d2v.docvecs:
             idwords = json.loads(idwords)
